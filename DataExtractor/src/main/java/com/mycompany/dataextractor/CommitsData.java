@@ -6,16 +6,9 @@
 package com.mycompany.dataextractor;
 
 
-import com.github.mauricioaniche.ck.CKClassResult;
-import com.github.mauricioaniche.ck.MetricsExecutor;
-import com.github.mauricioaniche.ck.metric.CBO;
-import com.github.mauricioaniche.ck.metric.ClassLevelMetric;
-import com.github.mauricioaniche.ck.metric.DIT;
-import com.github.mauricioaniche.ck.metric.LCOM;
-import com.github.mauricioaniche.ck.metric.WMC;
 import com.github.mauricioaniche.ck.util.LOCCalculator;
 import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.util.List;
 import org.eclipse.jgit.api.Git;
@@ -29,12 +22,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import org.apache.commons.io.FileUtils;
+
 import org.apache.commons.io.FilenameUtils;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.diff.DiffEntry;
@@ -43,7 +34,6 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.ObjectStream;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 
@@ -121,25 +111,10 @@ public class CommitsData {
 //                    break;
 //                }
                 System.out.println("Commit: " + rev.getName());
-                 
-                 // Get commit message to know about bug
-                String commitmessage= rev.getFullMessage();
-                if (Strings.isNullOrEmpty(commitmessage)){
-                    bug.add("-");
-                }
-                else{
-                    commitmessage = commitmessage.toLowerCase();
-                    if (commitmessage.contains("error")||commitmessage.contains("fix")||commitmessage.contains("bug")||commitmessage.contains("failure")||commitmessage.contains("crash")||commitmessage.contains("wrong")||commitmessage.contains("unexpected")){
-    //                    System.out.println("Commit message: " + rev.getFullMessage());
-                        bug.add("yes");
+                String bugStatus = getBugStatus(rev);
+                bug.add(bugStatus);
 
-                    }else{
-                        bug.add("no");
-                    }
-                    
-                }
-                
-//                ArrayList<String> filenames = new ArrayList<String>();
+                //                ArrayList<String> filenames = new ArrayList<String>();
 //                ArrayList<Integer> loc_list = new ArrayList<>();
                 
                 // RevTree object to store the tree of files contained in a commit.
@@ -385,6 +360,28 @@ public class CommitsData {
        }
 
 }
+
+    /**
+     * Return whether commit handles/fixes a bug.
+     */
+    private static String getBugStatus(RevCommit rev) {
+        // Get commit message to know about bug
+        String commitmessage= rev.getFullMessage();
+        if (Strings.isNullOrEmpty(commitmessage)){
+            return "-";
+        }
+        else{
+            commitmessage = commitmessage.toLowerCase();
+            if (commitmessage.contains("error")||commitmessage.contains("fix")||commitmessage.contains("bug")||commitmessage.contains("failure")||commitmessage.contains("crash")||commitmessage.contains("wrong")||commitmessage.contains("unexpected")){
+//                    System.out.println("Commit message: " + rev.getFullMessage());
+                return "yes";
+
+            }else{
+                return "no";
+            }
+
+        }
+    }
 
     /**
      * Get all commits of a release
