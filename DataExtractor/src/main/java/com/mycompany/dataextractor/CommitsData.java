@@ -53,31 +53,27 @@ public class CommitsData {
 //    public static final String REMOTE_URL = "https://github.com/apache/hadoop.git";
     public static void main(String[] args) throws IOException, GitAPIException {
         // Create a repository object to hold current repository references (Local repository)
-        Repository repo = new FileRepository("D:/GitHub/hadoop/.git");
+        Repository repo = new FileRepository("/home/anna/Schreibtisch/Semester/Software_Maintenance_Evolution/project/projects/hadoop/.git");
         Git git = new Git(repo);
         LOCCalculator obj = new LOCCalculator();
         
         // version list stores the repository version tags
-        List version = new ArrayList();
+        List<String> version = new ArrayList<>();
         
         // commit_names stores all commits in a revision
-        List<RevCommit> commit_names= new ArrayList<RevCommit>();
+        List<RevCommit> commit_names= new ArrayList<>();
         
         // loc_list stores Lines of Code for all files of a specific commit
-         Map<Integer, List<Integer>> loc_list = new HashMap<Integer, List<Integer>>();
-        
-        
+        Map<Integer, List<Integer>> loc_list = new HashMap<>();
+
         // bug list will store "yes" if there is a bug in a commit, otherwise "no"
-        ArrayList<String> bug = new ArrayList<String>();
+        ArrayList<String> bug = new ArrayList<>();
         
         //filenames stores name of Java file with its package name
-        Map<Integer, List<String>> filenames = new HashMap<Integer, List<String>>();
+        Map<Integer, List<String>> filenames = new HashMap<>();
         
         // Hashmap for total files in each commit
-        Map<Integer,Integer> total_files_in_commit = new HashMap<Integer,Integer>();
-              
-        // CBO metric list for each file in a commit
-        Map<Integer, List<Integer>> cbo_metric = new HashMap<Integer, List<Integer>>();
+        Map<Integer,Integer> total_files_in_commit = new HashMap<>();
         
         // Temporarily stores a file path
         String temp_filepath;
@@ -90,7 +86,7 @@ public class CommitsData {
         System.out.println(tags.size());
         
         // Currently we need only one release so first_refs will contain one release name tag
-        List<Ref> first_refs =new ArrayList();
+        List<Ref> first_refs = new ArrayList<>();
         first_refs.add(tags.get(0));
 //        System.out.println(first_refs.get(0).getName().substring(10));
 //        version.add(first_refs.get(0).getName().substring(10));
@@ -143,7 +139,7 @@ public class CommitsData {
                     bug.add("-");
                 }
                 else{
-                    commitmessage.toLowerCase();
+                    commitmessage = commitmessage.toLowerCase();
                     if (commitmessage.contains("error")||commitmessage.contains("fix")||commitmessage.contains("bug")||commitmessage.contains("failure")||commitmessage.contains("crash")||commitmessage.contains("wrong")||commitmessage.contains("unexpected")){
     //                    System.out.println("Commit message: " + rev.getFullMessage());
                         bug.add("yes");
@@ -156,10 +152,6 @@ public class CommitsData {
                 
 //                ArrayList<String> filenames = new ArrayList<String>();
 //                ArrayList<Integer> loc_list = new ArrayList<>();
-                
-                // RevWalk to walk over a commit graph to get matching commits
-                RevWalk revWalk = new RevWalk(repo);
-                RevCommit commitid = revWalk.parseCommit(rev.getId());
                 
                 // RevTree object to store the tree of files contained in a commit.
 //                RevTree tree = commitid.getTree();
@@ -195,9 +187,9 @@ public class CommitsData {
             // Iterate all changed(modified, deleted etc) files between these commits
             for( DiffEntry entry : entries ) {
               //To store file name/Package name for current file in the loop 
-              ArrayList<String> file_list_for_commit = new ArrayList<String>();
+              ArrayList<String> file_list_for_commit = new ArrayList<>();
               //To store Lines of Code for current file in the loop 
-              ArrayList<Integer> loc_list_for_commit = new ArrayList<Integer>();
+              ArrayList<Integer> loc_list_for_commit = new ArrayList<>();
               //Counter for total files in commit
               int total_files=0;
               System.out.println( entry );
@@ -210,8 +202,8 @@ public class CommitsData {
 //                  System.out.println("File class name: "+temp_filepath);
                   System.out.println("Filename getNewPath(): "+entry.getNewPath());
                   // If file is not DELETED, get its LOC and package name
-                  if (entry.getChangeType().toString()!="DELETE"){
-                      String fileContent = null;
+                  if (!entry.getChangeType().toString().equals("DELETE")){
+
                       total_files++;
 //                      System.out.println("file count: "+total_files_in_commit);
                       System.out.println("File not deleted: "+entry.getNewPath());
@@ -223,9 +215,7 @@ public class CommitsData {
                        
                        // loader object will open the file with given ID(objectId)
                         ObjectLoader loader = repo.open(objectId);
-                        
-                        // Stringbuilder sb to store file contents as String
-                      StringBuilder sb = new StringBuilder();
+
 //                        String fileContent = new String(loader.getBytes());
                         
                         // Open stream for the file to read its contents
@@ -245,8 +235,7 @@ public class CommitsData {
                               // If line contains package info, get that line and extract package name. Example. com.mycompany.dataextractor
                               else if (line.trim().startsWith("package")){
                                   // Split line defining package name. Ex "package org.apache.hadoop;"
-                                  String[] splitted = line.split("\\s+"); 
-                                  splitted = line.split("\\s+");
+                                  String[] splitted = line.split("\\s+");
                                   // Append package name to add file name
                                   file_list_for_commit.add(splitted[1].replaceAll(";", ".").concat(temp_filepath));
                                   
@@ -359,17 +348,15 @@ public class CommitsData {
                 for (int i:keys){
 //                for (int i=0;i<commit_names.size()-1;i++){
                 // Check for Null pointer(Jump to next key if "Null" value)
-                Boolean value=filenames.get(i).isEmpty();
-                if (value==true){
+                boolean value=filenames.get(i).isEmpty();
+                if (value){
                     continue;
                 }
                //Get list of file names(for a commit) from hashmap 'filenames'
-                List<String> temp_file_names = new ArrayList();
-                temp_file_names=(List <String >)filenames.get(i);
+                List<String> temp_file_names = filenames.get(i);
                 
                 //Get list of file LOC(for a commit) from hashmap 'loc_list'
-                List<Integer> temp_file_loc = new ArrayList();
-                temp_file_loc=(List <Integer>)loc_list.get(i);
+                List<Integer> temp_file_loc = loc_list.get(i);
                 
                 //Get files_per_commit from hashmap 'total_files_in_commit'
                 int files_per_commit = total_files_in_commit.get(i);
@@ -377,15 +364,15 @@ public class CommitsData {
                 for(int j=0; j<files_per_commit;j++){
                     System.out.println("j value: "+j);
                     // 'v' is release name
-                    String v=(String) version.get(0);
+                    String v = version.get(0);
                     // 'pr' is project name for this commit
-                    String pr=project_name;
+                    String pr = project_name;
                     // 'name' stores name of file(java package) for current commit and current file in this commit
-                    String name=temp_file_names.get(j).toString();
+                    String name = temp_file_names.get(j);
                     // 'b' stores bug for current commit
-                    String b=bug.get(i);
+                    String b = bug.get(i);
                     // 'l' stores lines of code for current commit and current file in this commit
-                    int l=(Integer) temp_file_loc.get(j);
+                    int l = temp_file_loc.get(j);
                     row_data.append(pr);
                     row_data.append(",");
                     row_data.append(v);
