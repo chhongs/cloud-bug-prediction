@@ -52,8 +52,10 @@ public class CommitsData {
     // URL of remote repository
 //    public static final String REMOTE_URL = "https://github.com/apache/hadoop.git";
     public static void main(String[] args) throws IOException, GitAPIException {
+        String repoPath = args[0];
+
         // Create a repository object to hold current repository references (Local repository)
-        Repository repo = new FileRepository("/home/anna/Schreibtisch/Semester/Software_Maintenance_Evolution/project/projects/hadoop/.git");
+        Repository repo = new FileRepository(repoPath);
         Git git = new Git(repo);
         LOCCalculator obj = new LOCCalculator();
         
