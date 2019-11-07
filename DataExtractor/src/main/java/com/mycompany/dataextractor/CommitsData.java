@@ -128,21 +128,11 @@ public class CommitsData {
 
             // Iterate on commits to extract data(Files, LOC etc.)
             for (int k = 0; k < commit_names.size() - 1; k++) {
-                //Get modifications between two commits
-                CanonicalTreeParser treeParser1 = new CanonicalTreeParser();
+
                 ObjectId treeId1 = commit_names.get(k).getTree().getId();
-                try (ObjectReader reader = repo.newObjectReader()) {
-                    treeParser1.reset(reader, treeId1);
-                }
-                CanonicalTreeParser treeParser2 = new CanonicalTreeParser();
                 ObjectId treeId2 = commit_names.get(k + 1).getTree().getId();
-                try (ObjectReader reader1 = repo.newObjectReader()) {
-                    treeParser2.reset(reader1, treeId2);
-                }
-                DiffFormatter df = new DiffFormatter(new ByteArrayOutputStream()); // use NullOutputStream.INSTANCE if you don't need the diff output
-                df.setRepository(git.getRepository());
-                // Entries stores all the files with path which have MODIFIED, DELETED, or ADDED
-                List<DiffEntry> entries = df.scan(treeParser1, treeParser2);
+                List<DiffEntry> entries = getDiffEntries(treeId1, treeId2);
+
                 System.out.println("Entry count: " + entries.size());
                 System.out.println("Entry size: " + entries.size());
 
@@ -354,6 +344,26 @@ public class CommitsData {
             System.err.println("Can't create CSV file. May be the required file is open.");
         }
 
+    }
+
+    /**
+     * Get files that have been modified between two commits.
+     */
+    private static List<DiffEntry> getDiffEntries(ObjectId treeId1, ObjectId treeId2) throws IOException {
+        CanonicalTreeParser treeParser1 = new CanonicalTreeParser();
+
+        try (ObjectReader reader = repo.newObjectReader()) {
+            treeParser1.reset(reader, treeId1);
+        }
+        CanonicalTreeParser treeParser2 = new CanonicalTreeParser();
+
+        try (ObjectReader reader1 = repo.newObjectReader()) {
+            treeParser2.reset(reader1, treeId2);
+        }
+        DiffFormatter df = new DiffFormatter(new ByteArrayOutputStream()); // use NullOutputStream.INSTANCE if you don't need the diff output
+        df.setRepository(git.getRepository());
+
+        return df.scan(treeParser1, treeParser2);
     }
 
     /**
