@@ -49,14 +49,18 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 
 public class CommitsData {
+
+    private static Repository repo;
+    private static Git git;
+
     // URL of remote repository
 //    public static final String REMOTE_URL = "https://github.com/apache/hadoop.git";
     public static void main(String[] args) throws IOException, GitAPIException {
         String repoPath = args[0];
 
         // Create a repository object to hold current repository references (Local repository)
-        Repository repo = new FileRepository(repoPath);
-        Git git = new Git(repo);
+        repo = new FileRepository(repoPath);
+        git = new Git(repo);
         LOCCalculator obj = new LOCCalculator();
         
         // version list stores the repository version tags
@@ -96,28 +100,11 @@ public class CommitsData {
         
         // Loop over the release to get commits
         for (Ref ref : first_refs) {
-            
             version.add(ref.getName().substring(10));
             System.out.println("Tag: " + ref + " " + ref.getName() + " " + ref.getObjectId().getName());
-            
-            // get a logcommand object to call commits
-            LogCommand log = git.log();
-            
-            // Get commit Id in peeledRef, also add Release/Tag Id to get logs/commits for this release
-            Ref peeledRef = repo.getRefDatabase().peel(ref);
-            if(peeledRef.getPeeledObjectId() != null) {
-                System.out.println("Peeled");
-                log.add(peeledRef.getPeeledObjectId());
-//                log.addRange(peeledRef.getPeeledObjectId(), peeledRef.getPeeledObjectId());
-            } else {
-                log.add(ref.getObjectId());
-//                log.addRange(ref.getObjectId(), ref.getObjectId());
-                System.out.println(" not Peeled: "+ref.getObjectId());
-            }
-            
-            // RevCommit object will contain all the commits for the release
-            Iterable<RevCommit> logs = log.call();
-//            List<RevCommit> commitList = Lists.newArrayList(logs);
+            Iterable<RevCommit> logs = getRevCommits(ref);
+
+            //            List<RevCommit> commitList = Lists.newArrayList(logs);
 //            List<RevCommit> first_commit = new ArrayList();
 //            first_commit.add(commitList.get(0));
 //            System.out.println(first_commit.size());
@@ -336,7 +323,7 @@ public class CommitsData {
             catch(IOException e){
                 System.err.println("Can't create CSV file. May be the required file is open.");
             }
-            
+
             // Append new data to the CSV file
             try (FileWriter csvWriter = new FileWriter("csvfiles/hadoop.csv", true)) {
                 //row_data stores data for each row in CSV
@@ -345,7 +332,7 @@ public class CommitsData {
                 // Get all keys from HashMap "filenames"
                 Set<Integer> keys = filenames.keySet();
 //                int size=filenames.size();
-                
+
                 //Iterate on keys to get data for CSV file
                 for (int i:keys){
 //                for (int i=0;i<commit_names.size()-1;i++){
@@ -356,10 +343,10 @@ public class CommitsData {
                 }
                //Get list of file names(for a commit) from hashmap 'filenames'
                 List<String> temp_file_names = filenames.get(i);
-                
+
                 //Get list of file LOC(for a commit) from hashmap 'loc_list'
                 List<Integer> temp_file_loc = loc_list.get(i);
-                
+
                 //Get files_per_commit from hashmap 'total_files_in_commit'
                 int files_per_commit = total_files_in_commit.get(i);
                     // Store data into CSV
@@ -388,7 +375,7 @@ public class CommitsData {
                     csvWriter.append("\n");
                     row_data.setLength(0);
                 }
-                
+
                 csvWriter.flush();
                 System.out.println("CSV file created successfully!");
             }
@@ -396,7 +383,30 @@ public class CommitsData {
        catch(IOException e){
            System.err.println("Can't create CSV file. May be the required file is open.");
        }
- 
+
 }
-    
+
+    /**
+     * Get all commits of a release
+     */
+    private static Iterable<RevCommit> getRevCommits(Ref ref) throws IOException, GitAPIException {
+        // get a logcommand object to call commits
+        LogCommand log = git.log();
+
+        // Get commit Id in peeledRef, also add Release/Tag Id to get logs/commits for this release
+        Ref peeledRef = repo.getRefDatabase().peel(ref);
+        if(peeledRef.getPeeledObjectId() != null) {
+            System.out.println("Peeled");
+            log.add(peeledRef.getPeeledObjectId());
+//                log.addRange(peeledRef.getPeeledObjectId(), peeledRef.getPeeledObjectId());
+        } else {
+            log.add(ref.getObjectId());
+//                log.addRange(ref.getObjectId(), ref.getObjectId());
+            System.out.println(" not Peeled: "+ref.getObjectId());
+        }
+
+        // RevCommit object will contain all the commits for the release
+        return log.call();
+    }
+
 }
