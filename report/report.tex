@@ -1,0 +1,42 @@
+\documentclass{seal_article}
+
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{S.E.A.L. Article}
+\subtitle{Example}
+
+\begin{document}
+\maketitle
+
+\section{Methodology}
+
+\subsection{Bug prediction}
+\subsubsection{Project Sample}
+Since we used the tool \textsc{ck} \cite{ck} to compute some of our metrics which specifically targets \textsc{Java} projects, we only included Java cloud projects in our sample. Furthermore, we selected projects with at least 100 releases.
+
+\subsection{ASAT adoption in Cloud System}
+
+\subsubsection{Project sample}
+We created a sample of 10 cloud projects written in \textsc{Go} that use ASAT and proceeded with the collection as follows: We used \textsc{GitHub}'s search functionality\footnote{https://github.com/search} using query words such as \textit{cloud} to find suitable projects. We filtered the projects by the programming language (\textsc{Go}) and the number of stars (>500). We then manually checked whether a given project really represented a cloud system by reading the repository's description. Finally, we removed projects that do not use ASAT using a script that scans all projects files for ASAT command usage (more details in the next section).
+
+
+
+%\begin{lstlisting}[caption=An example code snippet]
+%/**
+% * Javadoc comment
+% */
+%public class Foo {
+%	// line comment
+%	public void bar(int number) {
+%		if (number < 0) {
+%			return; /* block comment */
+%		}
+%	}
+%}
+%\end{lstlisting}
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+
+\end{document}
