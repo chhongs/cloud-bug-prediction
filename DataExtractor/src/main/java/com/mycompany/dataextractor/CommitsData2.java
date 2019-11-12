@@ -37,12 +37,9 @@ public class CommitsData2 {
     private final static String WRONG = "wrong";
     private final static String UNEXPECTED = "enexpected";
 
-    public List<MatrixData> getCommits(List<Integer> versions, String repoPath) throws IOException, GitAPIException {
-// Create a repository object to hold current repository references (Local repository)
-        System.out.println(repoPath);
-        repo = new FileRepository(repoPath);
-        git = new Git(repo);
-        LOCCalculator obj = new LOCCalculator();
+    public List<MatrixData> getCommits(List<Integer> versions, Repository repository, Git r) throws IOException, GitAPIException {
+        repo = repository;
+        git = r;
         // version list stores the repository version tags
         List<String> version = new ArrayList<>();
         // commit_names stores all commits in a revision
@@ -63,7 +60,7 @@ public class CommitsData2 {
         // Currently we need only one release so first_refs will contain one release name tag
         List<Ref> first_refs = new ArrayList<>();
         versions.forEach((i) -> {
-            first_refs.add(tags.get(i-1));
+            first_refs.add(tags.get(i - 1));
         });
         System.out.println(first_refs.get(0).getName().substring(10));
         // Loop over the release to get commits
@@ -71,18 +68,12 @@ public class CommitsData2 {
             version.add(ref.getName().substring(10));
             System.out.println("Tag: " + ref + " " + ref.getName() + " " + ref.getObjectId().getName());
             Iterable<RevCommit> logs = getRevCommits(ref);
-
-            // temporary counter for testing(take 100 commits for testing purpose)
             int mycount = 0;
             for (RevCommit rev : logs) {
                 mycount++; //temporary break
                 System.out.println("Commit No.: " + mycount);
                 System.out.println("Commit message.: " + rev.getFullMessage());
-//                System.out.println("Tag for this commit: " + ref + " " + ref.getName());
                 commit_names.add(rev);
-//                if (mycount==11){
-//                    break;
-//                }
                 System.out.println("Commit: " + rev.getName());
                 String bugStatus = getBugStatus(rev);
                 bug.add(bugStatus);
@@ -91,7 +82,7 @@ public class CommitsData2 {
             System.out.println("Total Commits in this release is: " + commit_names.size());
 
             extractData(commit_names, filenames, total_files_in_commit);
-            System.out.println("total files in commit "+total_files_in_commit.size());
+            System.out.println("total files in commit " + total_files_in_commit.size());
         }
         System.out.println("Total Commits in this release is: " + commit_names.size());
         System.out.println("Exit from loops. Creating CSV.");
@@ -165,11 +156,7 @@ public class CommitsData2 {
                         } catch (IOException ex) {
                             System.out.println(ex);
                         }
-
                     } else {
-                        // If no java files in current commit, then continue to the next commit
-//                      file_list_for_commit.add("No file");
-//                      loc_list_for_commit.add(0);
                         continue;
                     }
                 }
@@ -177,17 +164,14 @@ public class CommitsData2 {
                 filenames.put(k, file_list_for_commit);
                 //Add total_files for a commit to HashMap where key is 'k'
                 total_files_in_commit.put(k, total_files);
-//              file_list_for_commit.clear();
-//              loc_list_for_commit.clear();
             } //diff entry loop between two commits
         }
     }
 
-    public List<MatrixData> setBasicData(Map<Integer, List<String>> filenames,Map<Integer, Integer> total_files_in_commit, String proj_name,List<String> version, ArrayList<String> bug)
-    {
+    public List<MatrixData> setBasicData(Map<Integer, List<String>> filenames, Map<Integer, Integer> total_files_in_commit, String proj_name, List<String> version, ArrayList<String> bug) {
         List<MatrixData> matrixDataList = new ArrayList<>();
         Set<Integer> keys = filenames.keySet();
-        System.out.println("file names size "+keys.size());
+        System.out.println("file names size " + keys.size());
         //Iterate on keys to get data for CSV file
         for (int i : keys) {
 //                for (int i=0;i<commit_names.size()-1;i++){
@@ -200,7 +184,7 @@ public class CommitsData2 {
             List<String> temp_file_names = filenames.get(i);
             //Get files_per_commit from hashmap 'total_files_in_commit'
             int files_per_commit = total_files_in_commit.get(i);
-            System.out.println("total files in commit "+files_per_commit);
+            System.out.println("total files in commit " + files_per_commit);
             // Store data into CSV
             for (int j = 0; j < files_per_commit; j++) {
                 System.out.println("j value: " + j);
@@ -212,7 +196,7 @@ public class CommitsData2 {
                 System.out.println(temp_file_names.get(j));
                 // 'b' stores bug for current commit
                 String b = bug.get(i);
-                if(b.equals(BUG_YES)) matrixData.setBug(Boolean.TRUE);
+                if (b.equals(BUG_YES)) matrixData.setBug(Boolean.TRUE);
                 else matrixData.setBug(Boolean.FALSE);
                 matrixDataList.add(matrixData);
             }
