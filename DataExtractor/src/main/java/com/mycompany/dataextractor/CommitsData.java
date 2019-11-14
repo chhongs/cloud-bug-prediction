@@ -6,12 +6,25 @@
 package com.mycompany.dataextractor;
 
 
+import com.github.mauricioaniche.ck.CK;
+import com.github.mauricioaniche.ck.CKClassResult;
+import com.github.mauricioaniche.ck.CKNotifier;
+import com.github.mauricioaniche.ck.metric.ClassLevelMetric;
+import com.github.mauricioaniche.ck.metric.MethodLevelMetric;
+import com.github.mauricioaniche.ck.metric.RFC;
 import com.github.mauricioaniche.ck.util.LOCCalculator;
+import com.github.mauricioaniche.ck.util.ResultWriter;
+
+import java.io.*;
+
+
 import com.google.common.base.Strings;
 
-import java.io.IOException;
 import java.util.List;
 
+import com.opencsv.CSVReader;
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
@@ -19,14 +32,11 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.io.FilenameUtils;
 import org.eclipse.jgit.api.LogCommand;
@@ -39,6 +49,8 @@ import org.eclipse.jgit.lib.ObjectStream;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 
+
+
 public class CommitsData {
 
     private static Repository repo;
@@ -47,11 +59,12 @@ public class CommitsData {
     // URL of remote repository
 //    public static final String REMOTE_URL = "https://github.com/apache/hadoop.git";
     public static void main(String[] args) throws IOException, GitAPIException {
-        String repoPath = args[0];
-
-        // Create a repository object to hold current repository references (Local repository)
-        repo = new FileRepository(repoPath);
+        String repoPath = "/Users/sophy/desktop/hadoop";
+        // Create a repository object to hold current repositorßy references (Local repository)
+        repo = new FileRepository(repoPath+"/.git");
         git = new Git(repo);
+
+
         LOCCalculator obj = new LOCCalculator();
 
         // version list stores the repository version tags
@@ -80,7 +93,15 @@ public class CommitsData {
 
         // tags list will contain all the releases tags. For ex 0.92RC0
         List<Ref> tags = git.tagList().call();
-        System.out.println(tags.size());
+        //System.out.println(tags.size());
+        for(Ref ref: tags){
+            System.out.println(ref.toString());
+        }
+
+        String s = Git.wrap(repo).describe().setTarget(ObjectId.fromString("2b33320dd9b8dd1601b047f9b69540e6558c5996")).call();
+        System.out.println("current tag: "+s);
+
+        //System.out.println("current tag "+git.tag().call().toString());
 
         // Currently we need only one release so first_refs will contain one release name tag
         List<Ref> first_refs = new ArrayList<>();
@@ -89,8 +110,9 @@ public class CommitsData {
 //        version.add(first_refs.get(0).getName().substring(10));
 //        System.out.println(version.get(0));
 
+        //CKClassResult res;
         // Loop over the release to get commits
-        for (Ref ref : first_refs) {
+        /*for (Ref ref : first_refs) {
             version.add(ref.getName().substring(10));
             System.out.println("Tag: " + ref + " " + ref.getName() + " " + ref.getObjectId().getName());
             Iterable<RevCommit> logs = getRevCommits(ref);
@@ -222,6 +244,11 @@ public class CommitsData {
                             int loc = obj.calculate(loaderstream);
                             loc_list_for_commit.add(loc);
 
+
+
+
+
+
                             // metrics
 //                        List<String> list_of_metrics= new ArrayList<String>();
 //                        list_of_metrics.add("CBO");
@@ -238,12 +265,28 @@ public class CommitsData {
 //                        dit_obj.setResult(metric_result);
 //                        System.out.println("DIT is: "+ metric_result.getDit());
                             System.out.println("Lines of Code: " + loc);
+
+
+                            res = new CKClassResult("csvfiles/class.csv", file_list_for_commit.get(k), "?", 0);
+
+
+                            Callable<List<ClassLevelMetric>> classMetrics;
+                            Callable<List<MethodLevelMetric>> methodMetrics;
+
+                            int t = k;
+
+                            CKClassResult finalRes = res;
+                            classMetrics = () -> new RFC().visit();
+                            //.execute(ast, finalRes);
+                            System.out.print("RFC result"+classMetrics);
                         } else {   // If no java files in current commit, then continue to the next commit
 //                      file_list_for_commit.add("No file");
 //                      loc_list_for_commit.add(0);
                             continue;
 
                         }
+
+
                     }
                     //Add file_list_for_commit list to HashMap where key is 'k'
                     filenames.put(k, file_list_for_commit);
@@ -251,11 +294,18 @@ public class CommitsData {
                     loc_list.put(k, loc_list_for_commit);
                     //Add total_files for a commit to HashMap where key is 'k'
                     total_files_in_commit.put(k, total_files);
+
+
+
+
 //              file_list_for_commit.clear();
 //              loc_list_for_commit.clear();
                 } //diff entry loop between two commits
             }
         }
+
+
+
 // To remove null pointers from the following HashMaps
 //        filenames.values().removeAll(Collections.singleton(null));
 //        loc_list.values().removeAll(Collections.singleton(null));
@@ -266,6 +316,7 @@ public class CommitsData {
         System.out.println("Total Commits in this release is: " + commit_names.size());
         System.out.println("Exit from loops. Creating CSV.");
 //       try{
+
 
         //create a CSV file under "csvfiles" folder in current path
         try (FileWriter csvWriter = new FileWriter("csvfiles/hadoop.csv", false)) {
@@ -339,10 +390,49 @@ public class CommitsData {
 
                 csvWriter.flush();
                 System.out.println("CSV file created successfully!");
+
+
+
+
             }
         } catch (IOException e) {
             System.err.println("Can't create CSV file. May be the required file is open.");
         }
+        */
+
+
+        /*
+
+        ResultWriter writer = new ResultWriter("csvfiles/class.csv", "csvfiles/method.csv", "csvfiles/variable.csv", "csvfiles/field.csv");
+
+        CK ck = new CK();
+        ck.calculate(repoPath, result -> {
+            try {
+                writer.printResult(result);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        writer.flushAndClose();*/
+
+
+
+
+// Read existing file
+
+        File tmp = new File("csvfiles/tmp.csv");
+        CSVReader reader = new CSVReader(new FileReader("/Users/sophy/Desktop/cloud_bug_prediction/cloud-bug-prediction-asat/DataExtractor/csvfiles/class1.csv"), ',');
+        List<String[]> myEntries = reader.readAll();
+        reader.close();
+
+        CSVReader reader2 = new CSVReader(new FileReader("/Users/sophy/Desktop/cloud_bug_prediction/cloud-bug-prediction-asat/DataExtractor/csvfiles/hadoop.csv"), ',');
+        List<String[]> myEntries2 = reader2.readAll();
+        reader2.close();
+// get CSV row column  and replace with by using row and column
+        System.out.println("Class csv rows "+myEntries.size());
+        System.out.println("Hadoop csv rows "+myEntries2.size());
+
 
     }
 
