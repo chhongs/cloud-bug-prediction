@@ -20,7 +20,7 @@ import java.io.*;
 
 import com.google.common.base.Strings;
 
-import java.util.List;
+import java.util.*;
 
 import com.opencsv.CSVReader;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -28,24 +28,18 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
+//import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.io.FilenameUtils;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.ObjectStream;
+import org.eclipse.jgit.revwalk.RevObject;
+import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 
@@ -59,27 +53,17 @@ public class CommitsData {
     // URL of remote repository
 //    public static final String REMOTE_URL = "https://github.com/apache/hadoop.git";
     public static void main(String[] args) throws IOException, GitAPIException {
-        String repoPath = "/Users/sophy/desktop/hadoop";
+        String repoPath = "/Users/hadoop";
         // Create a repository object to hold current repositorßy references (Local repository)
         repo = new FileRepository(repoPath+"/.git");
         git = new Git(repo);
 
-
-        LOCCalculator obj = new LOCCalculator();
-
-        // version list stores the repository version tags
-        List<String> version = new ArrayList<>();
-
         // commit_names stores all commits in a revision
         List<RevCommit> commit_names = new ArrayList<>();
-
-        // loc_list stores Lines of Code for all files of a specific commit
-        Map<Integer, List<Integer>> loc_list = new HashMap<>();
 
         // bug list will store "yes" if there is a bug in a commit, otherwise "no"
         ArrayList<String> bug = new ArrayList<>();
 
-        //filenames stores name of Java file with its package name
         Map<Integer, List<String>> filenames = new HashMap<>();
 
         // Hashmap for total files in each commit
@@ -87,323 +71,242 @@ public class CommitsData {
 
         // Temporarily stores a file path
         String temp_filepath;
+        Map<String, String> filepaths = new HashMap<>();
 
-        // Project name is static for now
-        String project_name = "hadoop";
+        ArrayList<Integer> loc_list_for_commit = new ArrayList<>();
+        // To store WMC metric value for current file in a commit
+        ArrayList<Integer> wmc_list_for_commit = new ArrayList<>();
 
-        // tags list will contain all the releases tags. For ex 0.92RC0
-        List<Ref> tags = git.tagList().call();
-        //System.out.println(tags.size());
-        for(Ref ref: tags){
-            System.out.println(ref.toString());
+        // To store CBO metric value for current file in a commit
+        ArrayList<Integer> cbo_list_for_commit = new ArrayList<>();
+
+        // To store DIT metric value for current file in a commit
+        ArrayList<Integer> dit_list_for_commit = new ArrayList<>();
+
+        // To store LCOM metric value for current file in a commit
+        ArrayList<Integer> lcom_list_for_commit = new ArrayList<>();
+
+        //get a certain release
+        List<Ref> list = git.tagList().call();
+        Ref release = list.get(0);
+        String version = release.getName().replace("refs/tags/", "");
+        System.out.println("Release: " + version);
+
+        Iterable<RevCommit> logs = getRevCommits(release);
+        for (RevCommit rev : logs) {
+            commit_names.add(rev);
+            String bugStatus = getBugStatus(rev);
+            bug.add(bugStatus);
         }
 
-        String s = Git.wrap(repo).describe().setTarget(ObjectId.fromString("2b33320dd9b8dd1601b047f9b69540e6558c5996")).call();
-        System.out.println("current tag: "+s);
+        System.out.println("Commit numbers: " +commit_names.size());
 
-        //System.out.println("current tag "+git.tag().call().toString());
+        List<ObjectId> obj_ids = new ArrayList<>();
 
-        // Currently we need only one release so first_refs will contain one release name tag
-        List<Ref> first_refs = new ArrayList<>();
-        first_refs.add(tags.get(0));
-//        System.out.println(first_refs.get(0).getName().substring(10));
-//        version.add(first_refs.get(0).getName().substring(10));
-//        System.out.println(version.get(0));
+        for (int k = 0; k < commit_names.size()-1 ; k++) {
+            ObjectId treeId1 = commit_names.get(k).getTree().getId();
+            ObjectId treeId2 = commit_names.get(k + 1).getTree().getId();
+            List<DiffEntry> entries = getDiffEntries(treeId1, treeId2);
 
-        //CKClassResult res;
-        // Loop over the release to get commits
-        /*for (Ref ref : first_refs) {
-            version.add(ref.getName().substring(10));
-            System.out.println("Tag: " + ref + " " + ref.getName() + " " + ref.getObjectId().getName());
-            Iterable<RevCommit> logs = getRevCommits(ref);
+            for (DiffEntry entry : entries) {
+                //To store file name/Package name for current file in the loop
+                ArrayList<String> file_list_for_commit = new ArrayList<>();
+                String class_name_of_file =  null;
+                int total_files = 0;
+                if (entry.getNewPath().endsWith(".java")) {
+                    temp_filepath = entry.getNewPath();
+                    filepaths.put(repoPath+"/"+temp_filepath, repoPath+"/"+temp_filepath);
+                    temp_filepath = temp_filepath.substring(temp_filepath.lastIndexOf("/") + 1);
+                    String filepath = repoPath+"/"+temp_filepath;
+                    // remove extension of file name
+                    temp_filepath = FilenameUtils.removeExtension(temp_filepath);
 
-            //            List<RevCommit> commitList = Lists.newArrayList(logs);
-//            List<RevCommit> first_commit = new ArrayList();
-//            first_commit.add(commitList.get(0));
-//            System.out.println(first_commit.size());
+                    //System.out.println("Filename getNewPath(): " + entry.getNewPath());
+                    // If file is not DELETED, get its LOC and package name
+                    if (!entry.getChangeType().toString().equals("DELETE")) {
+                        total_files++;
+                        //System.out.println("File not deleted: " + entry.getNewPath());
+                        //System.out.println("File ID: " + entry.getNewId().toObjectId());
 
-            // temporary counter for testing(take 100 commits for testing purpose)
-            int mycount = 0;
-            for (RevCommit rev : logs) {
-                mycount++; //temporary break
-                System.out.println("Commit No.: " + mycount);
-                System.out.println("Commit message.: " + rev.getFullMessage());
-//                System.out.println("Tag for this commit: " + ref + " " + ref.getName());
-                commit_names.add(rev);
-//                if (mycount==11){
-//                    break;
-//                }
-                System.out.println("Commit: " + rev.getName());
-                String bugStatus = getBugStatus(rev);
-                bug.add(bugStatus);
+                        // objectId stores ID of current file
+                        ObjectId objectId = entry.getNewId().toObjectId();
 
-                //                ArrayList<String> filenames = new ArrayList<String>();
-//                ArrayList<Integer> loc_list = new ArrayList<>();
-
-                // RevTree object to store the tree of files contained in a commit.
-//                RevTree tree = commitid.getTree();
-//                System.out.println("Tree: " +tree.getName());
-//                int counter = 0;
-            }
-
-            System.out.println("Total Commits in this release is: " + commit_names.size());
-
-            // Iterate on commits to extract data(Files, LOC etc.)
-            for (int k = 0; k < commit_names.size() - 1; k++) {
-
-                ObjectId treeId1 = commit_names.get(k).getTree().getId();
-                ObjectId treeId2 = commit_names.get(k + 1).getTree().getId();
-                List<DiffEntry> entries = getDiffEntries(treeId1, treeId2);
-
-                System.out.println("Entry count: " + entries.size());
-                System.out.println("Entry size: " + entries.size());
-
-                // records number of files for a specific commit
-//            ArrayList<Integer> total_files_in_commit = new ArrayList<>();
-
-                // Iterate all changed(modified, deleted etc) files between these commits
-                for (DiffEntry entry : entries) {
-                    //To store file name/Package name for current file in the loop
-                    ArrayList<String> file_list_for_commit = new ArrayList<>();
-                    //To store Lines of Code for current file in the loop
-                    ArrayList<Integer> loc_list_for_commit = new ArrayList<>();
-                    //Counter for total files in commit
-                    int total_files = 0;
-                    System.out.println(entry);
-                    //Find Java files
-                    if (entry.getNewPath().endsWith(".java")) {
-                        temp_filepath = entry.getNewPath();
-                        temp_filepath = temp_filepath.substring(temp_filepath.lastIndexOf("/") + 1);
-                        // remove extension of file name
-                        temp_filepath = FilenameUtils.removeExtension(temp_filepath);
-//                  System.out.println("File class name: "+temp_filepath);
-                        System.out.println("Filename getNewPath(): " + entry.getNewPath());
-                        // If file is not DELETED, get its LOC and package name
-                        if (!entry.getChangeType().toString().equals("DELETE")) {
-
-                            total_files++;
-//                      System.out.println("file count: "+total_files_in_commit);
-                            System.out.println("File not deleted: " + entry.getNewPath());
-                            System.out.println("File not deleted: " + entry.getNewId().toObjectId());
+                        // loader object will open the file with given ID(objectId)
+                        ObjectLoader loader = repo.open(objectId);
 
 
-                            // objectId stores ID of current file
-                            ObjectId objectId = entry.getNewId().toObjectId();
+                        // Open stream for the file to read its contents
+                        ObjectStream loaderstream = loader.openStream();
 
-                            // loader object will open the file with given ID(objectId)
-                            ObjectLoader loader = repo.open(objectId);
-
-//                        String fileContent = new String(loader.getBytes());
-
-                            // Open stream for the file to read its contents
-                            ObjectStream loaderstream = loader.openStream();
-
-                            try ( // Read contents of file to get package name
-                                  BufferedReader reader = new BufferedReader(new InputStreamReader(loaderstream))) {
-                                String line = reader.readLine();
-                                while (line != null) {
+                        try ( // Read contents of file to get package name
+                              BufferedReader reader = new BufferedReader(new InputStreamReader(loaderstream))) {
+                            String line = reader.readLine();
+                            while (line != null) {
 
 
-                                    // Skip the comments and empty lines from the Java file
-                                    if (line.isEmpty() || line.trim().startsWith("/*") || line.trim().startsWith("//") || line.trim().startsWith("*") || line.trim().startsWith("@")) {
-                                        line = reader.readLine();
-                                    }
-                                    // If line contains package info, get that line and extract package name. Example. com.mycompany.dataextractor
-                                    else if (line.trim().startsWith("package")) {
-                                        // Split line defining package name. Ex "package org.apache.hadoop;"
-                                        String[] splitted = line.split("\\s+");
-                                        // Append package name to add file name
-                                        file_list_for_commit.add(splitted[1].replaceAll(";", ".").concat(temp_filepath));
-
-                                        System.out.println(splitted[1].replaceAll(";", ".").concat(temp_filepath));
-                                        // Stop reading next lines
-                                        break;
-                                    } else {
-                                        break;
-                                    }
-
+                                // Skip the comments and empty lines from the Java file
+                                if (line.isEmpty() || line.trim().startsWith("/*") || line.trim().startsWith("//") || line.trim().startsWith("*") || line.trim().startsWith("@")) {
+                                    line = reader.readLine();
                                 }
-//                          while(line!=null){
-//                              // add line to stringBuilder sb
-//                              sb.append(line);
-//                              sb.append('\n');
-//                              line=reader.readLine();
-//                          }
-                                // Build a string out of file contents
-//                          fileContent = sb.toString();
+                                // If line contains package info, get that line and extract package name. Example. com.mycompany.dataextractor
+                                else if (line.trim().startsWith("package")) {
+                                    // Split line defining package name. Ex "package org.apache.hadoop;"
+                                    String[] splitted = line.split("\\s+");
+                                    // Append package name to add file name
+                                    class_name_of_file = splitted[1].replaceAll(";", ".").concat(temp_filepath);
+                                    file_list_for_commit.add(class_name_of_file);
+//                                        file_list_for_commit.add(splitted[1].replaceAll(";", ".").concat(temp_filepath));
 
-                                // Close file reader object
-                                reader.close();
-                                System.out.println("Reader closed");
-                            } catch (IOException ex) {
-                                System.out.println(ex);
+                                    //System.out.println(splitted[1].replaceAll(";", ".").concat(temp_filepath));
+                                    // Stop reading next lines
+                                    break;
+                                } else {
+                                    break;
+                                }
+
                             }
+//
+                        } catch (IOException ex) {
+                            System.out.println(ex);
+                        }
+                        try {
 
-
-                            // Calculate LOC of file
-                            int loc = obj.calculate(loaderstream);
-                            loc_list_for_commit.add(loc);
-
-
-
-
-
-
-                            // metrics
-//                        List<String> list_of_metrics= new ArrayList<String>();
-//                        list_of_metrics.add("CBO");
-//                        List<String> methodlevel_metrics= new ArrayList<String>();
-//                        methodlevel_metrics.add("WMC");
-//                        MetricsExecutor me= new MetricsExecutor(list_of_metrics,methodlevel_metrics,);
-
-                            // Calculate class metrics
-
-//                        CKClassResult metric_result= new CKClassResult(fileContent, temp_filepath,"java.");
-//                        System.out.println("CBO is: "+ metric_result.getCbo());
-
-//                        DIT dit_obj= new DIT();
-//                        dit_obj.setResult(metric_result);
-//                        System.out.println("DIT is: "+ metric_result.getDit());
-                            System.out.println("Lines of Code: " + loc);
-
-
-                            res = new CKClassResult("csvfiles/class.csv", file_list_for_commit.get(k), "?", 0);
-
-
-                            Callable<List<ClassLevelMetric>> classMetrics;
-                            Callable<List<MethodLevelMetric>> methodMetrics;
-
-                            int t = k;
-
-                            CKClassResult finalRes = res;
-                            classMetrics = () -> new RFC().visit();
-                            //.execute(ast, finalRes);
-                            System.out.print("RFC result"+classMetrics);
-                        } else {   // If no java files in current commit, then continue to the next commit
-//                      file_list_for_commit.add("No file");
-//                      loc_list_for_commit.add(0);
+                            String class_name = file_list_for_commit.get(total_files-1);
+                            List<Integer> mertics_value_list = calculateMetrics(filepath, class_name);
+                            wmc_list_for_commit.add(mertics_value_list.get(0));
+                            cbo_list_for_commit.add(mertics_value_list.get(1));
+                            dit_list_for_commit.add(mertics_value_list.get(2));
+                            lcom_list_for_commit.add(mertics_value_list.get(3));
+                        } catch(Exception ex){
+                            // Skip files that are not found on the release directory.
+                            System.out.println(" Exception for file occurred.");
+                            loc_list_for_commit.remove(total_files-1);
+//                                file_list_for_commit.remove(total_files-1);
+                            total_files -= 1;
                             continue;
-
                         }
 
 
                     }
-                    //Add file_list_for_commit list to HashMap where key is 'k'
-                    filenames.put(k, file_list_for_commit);
-                    //Add loc_list_for_commit list to HashMap where key is 'k'
-                    loc_list.put(k, loc_list_for_commit);
-                    //Add total_files for a commit to HashMap where key is 'k'
-                    total_files_in_commit.put(k, total_files);
+                }
 
-
-
-
-//              file_list_for_commit.clear();
-//              loc_list_for_commit.clear();
-                } //diff entry loop between two commits
+                filenames.put(k, file_list_for_commit);
+                total_files_in_commit.put(k, total_files);
             }
+
         }
+        System.out.println("All commit messages done.");
 
+        String csvPath = "csvfiles/hadoop_"+version+".csv";
 
-
-// To remove null pointers from the following HashMaps
-//        filenames.values().removeAll(Collections.singleton(null));
-//        loc_list.values().removeAll(Collections.singleton(null));
-//        total_files_in_commit.values().removeAll(Collections.singleton(null));
-//        while(filenames.values().remove(null));
-//        while(loc_list.values().remove(null));
-//        while(total_files_in_commit.values().remove(null));
-        System.out.println("Total Commits in this release is: " + commit_names.size());
-        System.out.println("Exit from loops. Creating CSV.");
-//       try{
-
-
-        //create a CSV file under "csvfiles" folder in current path
-        try (FileWriter csvWriter = new FileWriter("csvfiles/hadoop.csv", false)) {
+        try (FileWriter csvWriter = new FileWriter(csvPath, false)) {
             // Add column headings to CSV file
-            csvWriter.append("name-pr");
+            csvWriter.append("class-name");
             csvWriter.append(",");
-            csvWriter.append("version");
-            csvWriter.append(",");
-            csvWriter.append("name");
+            csvWriter.append("bug");
             csvWriter.append(",");
             csvWriter.append("loc");
             csvWriter.append(",");
-            csvWriter.append("bug");
+            csvWriter.append("wmc");
+            csvWriter.append(",");
+            csvWriter.append("dit");
+            csvWriter.append(",");
+            csvWriter.append("cbo");
+            csvWriter.append(",");
+            csvWriter.append("rfc");
+            csvWriter.append(",");
+            csvWriter.append("lcom");
             csvWriter.append("\n");
             csvWriter.flush();
+            System.out.println(csvPath);
+            System.out.println("Create CSV file at "+csvPath);
         } catch (IOException e) {
-            System.err.println("Can't create CSV file. May be the required file is open.");
+            System.err.println("Can't create CSV file. Maybe the required file is open.");
         }
 
-        // Append new data to the CSV file
-        try (FileWriter csvWriter = new FileWriter("csvfiles/hadoop.csv", true)) {
-            //row_data stores data for each row in CSV
-            StringBuilder row_data = new StringBuilder();
-//        for( int i=0; i<version.size();i++){
-            // Get all keys from HashMap "filenames"
-            Set<Integer> keys = filenames.keySet();
+
+        Set<Integer> keys = filenames.keySet();
 //                int size=filenames.size();
 
-            //Iterate on keys to get data for CSV file
-            for (int i : keys) {
-//                for (int i=0;i<commit_names.size()-1;i++){
-                // Check for Null pointer(Jump to next key if "Null" value)
-                boolean value = filenames.get(i).isEmpty();
-                if (value) {
-                    continue;
+        Map<String, String> class_map = new HashMap<String, String>();
+        //Iterate on keys to get data for CSV file
+        for (int i : keys) {
+
+            boolean value = filenames.get(i).isEmpty();
+            if (value) {
+                continue;
+            }
+            List<String> temp_file_names = filenames.get(i);
+            int files_per_commit = total_files_in_commit.get(i);
+        // Store data into CSV
+            for (int j = 0; j < files_per_commit; j++) {
+                String name = temp_file_names.get(j);
+                String b = bug.get(i);
+                String yes = "yes";
+                String computed = "false";
+
+                class_map.put(name, b);
+                if (b.equals(yes)) {
+                    break;
                 }
-                //Get list of file names(for a commit) from hashmap 'filenames'
-                List<String> temp_file_names = filenames.get(i);
-
-                //Get list of file LOC(for a commit) from hashmap 'loc_list'
-                List<Integer> temp_file_loc = loc_list.get(i);
-
-                //Get files_per_commit from hashmap 'total_files_in_commit'
-                int files_per_commit = total_files_in_commit.get(i);
-                // Store data into CSV
-                for (int j = 0; j < files_per_commit; j++) {
-                    System.out.println("j value: " + j);
-                    // 'v' is release name
-                    String v = version.get(0);
-                    // 'pr' is project name for this commit
-                    String pr = project_name;
-                    // 'name' stores name of file(java package) for current commit and current file in this commit
-                    String name = temp_file_names.get(j);
-                    // 'b' stores bug for current commit
-                    String b = bug.get(i);
-                    // 'l' stores lines of code for current commit and current file in this commit
-                    int l = temp_file_loc.get(j);
-                    row_data.append(pr);
-                    row_data.append(",");
-                    row_data.append(v);
-                    row_data.append(",");
-                    row_data.append(name);
-                    row_data.append(",");
-                    row_data.append(l);
-                    row_data.append(",");
-                    row_data.append(b);
-                    csvWriter.append(row_data.toString());
-                    csvWriter.append("\n");
-                    row_data.setLength(0);
-                }
-
-                csvWriter.flush();
-                System.out.println("CSV file created successfully!");
-
-
-
 
             }
-        } catch (IOException e) {
-            System.err.println("Can't create CSV file. May be the required file is open.");
         }
-        */
+
+        System.out.println("Number of classes: "+class_map.size());
+        System.out.println("Number of file paths: "+filepaths.size());
+
+        for (String key : filepaths.keySet()){
+                for (Map.Entry<String, String> entry : class_map.entrySet()) {
+                    new CK().calculate(key, result -> {
+                    String name = entry.getKey();
+                    String isBug = entry.getValue();
+                    if (result.getClassName().equals(name)) {
+                        StringBuilder row_data = new StringBuilder();
+                        try (FileWriter csvWriter = new FileWriter(csvPath, true)) {
+                            System.out.println("Class name: " + result.getClassName());
+                            System.out.println("Bug: " + isBug);
+                            System.out.println("LOC value: " + result.getLoc());
+                            System.out.println("WMC value: " + result.getWmc());
+                            System.out.println("DIT value: " + result.getDit());
+                            System.out.println("CBO value: " + result.getCbo());
+                            System.out.println("WMC value: " + result.getRfc());
+                            System.out.println("LCOM value: " + result.getLcom());
 
 
-        /*
+                            row_data.append(result.getClassName());
+                            row_data.append(",");
+                            row_data.append(isBug);
+                            row_data.append(",");
+                            row_data.append(result.getLoc());
+                            row_data.append(",");
+                            row_data.append(result.getWmc());
+                            row_data.append(",");
+                            row_data.append(result.getDit());
+                            row_data.append(",");
+                            row_data.append(result.getCbo());
+                            row_data.append(",");
+                            row_data.append(result.getRfc());
+                            row_data.append(",");
+                            row_data.append(result.getLcom());
+                            csvWriter.append(row_data.toString());
+                            csvWriter.append("\n");
+                            row_data.setLength(0);
+                            csvWriter.flush();
 
-        ResultWriter writer = new ResultWriter("csvfiles/class.csv", "csvfiles/method.csv", "csvfiles/variable.csv", "csvfiles/field.csv");
+                        } catch(IOException err){
+                            System.err.println("Can't create CSV file. May be the required file is open.");
+                        }
+
+                    }
+                });
+            }
+        }
+
+
+        //use this code to compute all metrics for classes, variables and methods
+        //doesn't compute the bug status for each class
+        /*ResultWriter writer = new ResultWriter("csvfiles/class.csv", "csvfiles/method.csv", "csvfiles/variable.csv", "csvfiles/field.csv");
 
         CK ck = new CK();
         ck.calculate(repoPath, result -> {
@@ -412,27 +315,9 @@ public class CommitsData {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        });
+        });*/
 
-        writer.flushAndClose();*/
-
-
-
-
-// Read existing file
-
-        File tmp = new File("csvfiles/tmp.csv");
-        CSVReader reader = new CSVReader(new FileReader("/Users/sophy/Desktop/cloud_bug_prediction/cloud-bug-prediction-asat/DataExtractor/csvfiles/class1.csv"), ',');
-        List<String[]> myEntries = reader.readAll();
-        reader.close();
-
-        CSVReader reader2 = new CSVReader(new FileReader("/Users/sophy/Desktop/cloud_bug_prediction/cloud-bug-prediction-asat/DataExtractor/csvfiles/hadoop.csv"), ',');
-        List<String[]> myEntries2 = reader2.readAll();
-        reader2.close();
-// get CSV row column  and replace with by using row and column
-        System.out.println("Class csv rows "+myEntries.size());
-        System.out.println("Hadoop csv rows "+myEntries2.size());
-
+        //writer.flushAndClose();
 
     }
 
@@ -461,6 +346,7 @@ public class CommitsData {
      */
     private static String getBugStatus(RevCommit rev) {
         // Get commit message to know about bug
+
         String commitmessage = rev.getFullMessage();
         if (Strings.isNullOrEmpty(commitmessage)) {
             return "-";
@@ -500,4 +386,23 @@ public class CommitsData {
         return log.call();
     }
 
+    private static List<Integer> calculateMetrics(String filepath, String class_name) {
+        Boolean useJars = true;
+        List<Integer> metrics_list = new ArrayList<>();
+        new CK().calculate(filepath, result -> {
+            if (result.getClassName().equals(class_name)) {
+                metrics_list.add(result.getWmc());
+                metrics_list.add(result.getCbo());
+                metrics_list.add(result.getDit());
+                metrics_list.add(result.getLcom());
+                System.out.println("Class name: " + result.getClassName());
+                System.out.println("DIT value: " + result.getDit());
+                System.out.println("CBO value: " + result.getCbo());
+                System.out.println("WMC value: " + result.getWmc());
+                System.out.println("LCOM value: " + result.getLcom());
+            }
+        });
+        // WMC, CBO, DIT and LCOM metrics
+        return metrics_list;
+    }
 }
