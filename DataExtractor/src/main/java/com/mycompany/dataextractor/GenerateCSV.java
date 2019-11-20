@@ -28,9 +28,9 @@ public class GenerateCSV {
                 versions::add
         );
         CommitsData2 commitsData2 = new CommitsData2();
-        List<MatrixData> matrixDataList = commitsData2.getCommits(versions, repo,git);
+        List<MatrixData> matrixDataList = commitsData2.getCommits(versions, repo, git);
         MatrixComputation matrixComputation = new MatrixComputation();
-        matrixDataList = matrixComputation.computeMatrix(versions,  repo,git, matrixDataList);
+        matrixDataList = matrixComputation.computeMatrix(versions, repo, git, matrixDataList);
         if (matrixDataList == null) {
             System.out.println("Version is not correct");
             return;
@@ -50,9 +50,12 @@ public class GenerateCSV {
             // create CSVWriter object filewriter object as parameter
             CSVWriter writer = new CSVWriter(outputfile);
             List<String[]> data = new ArrayList<>();
-            data.add(new String[]{"name-pr", "version", "name", "loc", "bug"});
+            data.add(new String[]{"name-pr", "version", "name", "loc", "wmc", "dit", "cbo", "rfc", "lcom", "bug"});
+
             for (MatrixData matrixData : unique) {
-                data.add(new String[]{matrixData.getNamePr(), matrixData.getVersion(), matrixData.getClassName(), matrixData.getLoc(), String.valueOf(matrixData.getBug())});
+                data.add(new String[]{matrixData.getNamePr(), matrixData.getVersion(), matrixData.getClassName(),
+                        matrixData.getLoc(), matrixData.getWmc(), matrixData.getDit(), matrixData.getCbo(),
+                        matrixData.getRfc(), matrixData.getLcom(),String.valueOf(matrixData.getBug())});
             }
             // create a List which contains String array
             writer.writeAll(data);

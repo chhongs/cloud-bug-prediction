@@ -60,7 +60,7 @@ public class CommitsData2 {
         // Currently we need only one release so first_refs will contain one release name tag
         List<Ref> first_refs = new ArrayList<>();
         versions.forEach((i) -> {
-            first_refs.add(tags.get(i - 1));
+            first_refs.add(tags.get(i));
         });
         System.out.println(first_refs.get(0).getName().substring(10));
         // Loop over the release to get commits
@@ -111,6 +111,7 @@ public class CommitsData2 {
                 //Find Java files
                 if (entry.getNewPath().endsWith(".java")) {
                     temp_filepath = entry.getNewPath();
+                    System.out.println(temp_filepath);
                     temp_filepath = temp_filepath.substring(temp_filepath.lastIndexOf("/") + 1);
                     // remove extension of file name
                     temp_filepath = FilenameUtils.removeExtension(temp_filepath);

@@ -4,6 +4,11 @@ public class MatrixData {
     private String className;
     private boolean isBug;
     private String loc;
+    private String wmc;
+    private String dit;
+    private String cbo;
+    private String rfc;
+    private String lcom;
     private String name;
     private String namePr;
     private String version;
@@ -30,6 +35,44 @@ public class MatrixData {
 
     public void setLoc(String loc) {
         this.loc = loc;
+    }
+
+    public void setWmc(String wmc) {
+        this.wmc = wmc;
+    }
+
+    public String getWmc() {
+        return wmc;
+    }
+
+    public void setDit(String dit) {
+        this.dit = dit;
+    }
+
+    public String getDit() {
+        return dit;
+    }
+
+    public void setCbo(String cbo) {
+        this.cbo = cbo;
+    }
+
+    public String getCbo() {
+        return cbo;
+    }
+
+    public void setRfc(String rfc) {
+        this.rfc = rfc;
+    }
+
+    public String getRfc() {
+        return rfc;
+    }
+
+    public void setLcom(String lcom) { this.lcom = lcom; }
+
+    public String getLcom() {
+        return lcom;
     }
 
     public String getName() {

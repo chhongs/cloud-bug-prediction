@@ -1,5 +1,6 @@
 package com.mycompany.dataextractor;
 
+import com.github.mauricioaniche.ck.CK;
 import com.github.mauricioaniche.ck.util.LOCCalculator;
 import com.mycompany.model.MatrixData;
 import org.eclipse.jgit.api.Git;
@@ -13,6 +14,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -70,9 +72,15 @@ public class MatrixComputation {
                         if (tw.getPathString().contains(className))
                         {
                             System.out.println("file: " + tw.getPathString() + " objectID " + tw.getObjectId(0));
+                            System.out.println("class name: " + className);
                             ObjectId objectId = tw.getObjectId(0);
-                            int loc = getLOC(objectId);
-                            matrixData.setLoc(String.valueOf(loc));
+                            List<Integer> metrics_list = calculateMetrics(tw.getPathString(), className);
+                            matrixData.setLoc(metrics_list.get(0).toString());
+                            matrixData.setWmc(metrics_list.get(1).toString());
+                            matrixData.setDit(metrics_list.get(2).toString());
+                            matrixData.setCbo(metrics_list.get(3).toString());
+                            matrixData.setRfc(metrics_list.get(4).toString());
+                            matrixData.setLcom(metrics_list.get(5).toString());
                             break;
                         }
                     }
@@ -90,6 +98,29 @@ public class MatrixComputation {
         int loc = LOCCalculator.calculate(loaderstream);
         System.out.println("loc " + loc);
         return loc;
+    }
+
+    private static List<Integer> calculateMetrics(String filepath, String class_name)
+    {
+        List<Integer> metrics_list = new ArrayList<>();
+        new CK().calculate(filepath, result -> {
+            if (result.getClassName().equals(class_name)) {
+                metrics_list.add(result.getLoc());
+                metrics_list.add(result.getWmc());
+                metrics_list.add(result.getDit());
+                metrics_list.add(result.getCbo());
+                metrics_list.add(result.getRfc());
+                metrics_list.add(result.getLcom());
+
+                /*System.out.println("Class name: " + result.getClassName());
+                System.out.println("DIT value: " + result.getDit());
+                System.out.println("CBO value: " + result.getCbo());
+                System.out.println("WMC value: " + result.getWmc());
+                System.out.println("LCOM value: " + result.getLcom());*/
+            }
+        });
+        // LOC, WMC, DIT, CBO, RFC and LCOM metrics
+        return metrics_list;
     }
 
     private static ObjectId getActualRefObjectId(Ref ref)
