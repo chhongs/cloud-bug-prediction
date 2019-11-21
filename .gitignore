@@ -1,3 +1,14 @@
 .idea
 target
 *.csv
+*.aux
+*.bbl
+*.log
+*.out
+*.pdf
+*.blg
+*.gz
+*.csv
+ASAT/repos
+*.zip
+__pycache__
