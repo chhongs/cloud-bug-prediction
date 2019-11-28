@@ -12,7 +12,7 @@ REPOS_PATH = 'repos'
 
 db = DB(DB_PATH)
 asats = db.get_ASATs()
-projects = db.get_projects()
+projects = db.get_projects()[:3]
 
 asat_usage_extractor = ASATUsageExtractor(asats)
 downloader = RepoDownloader(REPOS_PATH)

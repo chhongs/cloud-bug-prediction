@@ -1,4 +1,4 @@
-from attr import dataclass
+from dataclasses import dataclass
 from typing import List
 
 from model.asat_usage import ASATUsage
