@@ -29,3 +29,12 @@ def plot_asat_usage_percentages(projects):
            ylabel='ASAT',
            title='Percentages for ASATs used in projects')
     plt.show()
+
+
+def print_average_number_of_asats(projects):
+    total = 0
+    for project in projects:
+        total += len(project.asat_usages)
+
+    print('Average number of ASATs used by projects', total/len(projects))
+
