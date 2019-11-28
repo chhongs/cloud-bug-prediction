@@ -5,7 +5,8 @@ from downloader import RepoDownloader
 from db import DB
 from statistics import \
     plot_asat_usage_percentages, \
-    print_average_number_of_asats
+    print_average_number_of_asats, \
+    print_asat_arg_usage
 
 DB_PATH = 'projects.sqlite3'
 REPOS_PATH = 'repos'
@@ -23,3 +24,4 @@ for project in tqdm(projects):
 
 plot_asat_usage_percentages(asats, projects)
 print_average_number_of_asats(projects)
+print_asat_arg_usage(projects)

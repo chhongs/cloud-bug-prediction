@@ -21,3 +21,6 @@ class ArgUsage:
         self.options.update(arg_usage.options)
         for k, v in arg_usage.named.items():
             self.named[k].extend(v)
+
+    def get_parameters(self):
+        return self.options | set(self.named.keys())

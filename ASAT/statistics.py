@@ -42,3 +42,30 @@ def print_average_number_of_asats(projects):
 
     print('Average number of ASATs used by projects', total/len(projects))
 
+
+def print_asat_arg_usage(projects: List[Project]):
+    param_numbers = {}
+    asat_numbers = {}
+    for project in projects:
+        for asat_usage in project.asat_usages:
+            asat = asat_usage.asat
+            if asat not in asat_numbers:
+                asat_numbers[asat] = 0
+            asat_numbers[asat] += 1
+
+            if asat not in param_numbers:
+                param_numbers[asat] = {}
+
+            arg_usage = asat_usage.arg_usage
+            for param in arg_usage.get_parameters():
+                if param not in param_numbers[asat]:
+                    param_numbers[asat][param] = 0
+
+                param_numbers[asat][param] += 1
+
+    for asat in param_numbers:
+        print('ASAT: ', asat)
+        asat_num = asat_numbers[asat]
+        for param in param_numbers[asat]:
+            param_num = int(param_numbers[asat][param])
+            print(f'\tParameter: {param}, {param_num}/{asat_num}')
