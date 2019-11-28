@@ -17,7 +17,6 @@ class ASATUsageExtractor:
         asat_usages = []
 
         for asat in self.asats:
-            print(asat.name)
             asat_usage = self.get_asat_usage(repo_path, asat)
             if asat_usage:
                 asat_usages.append(asat_usage)

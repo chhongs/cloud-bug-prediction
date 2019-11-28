@@ -16,9 +16,13 @@ def get_asat_usage_numbers(projects: List[Project]):
     return numbers
 
 
-def plot_asat_usage_percentages(projects):
+def plot_asat_usage_percentages(asats, projects):
     numbers = get_asat_usage_numbers(projects)
     n_projects = len(projects)
+
+    for asat in asats:
+        if asat.name not in numbers:
+            numbers[asat.name] = 0
 
     group_data = [(num / n_projects)*100 for num in numbers.values()]
     group_names = list(numbers.keys())
