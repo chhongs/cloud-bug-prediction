@@ -71,7 +71,7 @@ class ASATUsageExtractor:
         """Get command usages of a specific ASAT in the repository's files."""
         cmd_usages = []
         proc = subprocess.run(
-            f'grep -r "[^A-Za-z]{asat.command}[^A-Za-z]" {repo_path}',
+            f'grep -r "{asat.command}" {repo_path}',
             shell=True,
             stdout=subprocess.PIPE,
             encoding='utf-8')
@@ -79,12 +79,15 @@ class ASATUsageExtractor:
             for cmd_usage in proc.stdout.split('\n'):
                 # ignore lines containing no matches
                 if ':' in cmd_usage:
-                    cmd_usages.append(cmd_usage)
+                    # do addtional filtering here
+                    # since extended grep command is slow
+                    if re.search(rf'\b{asat.command}\b', cmd_usage):
+                        cmd_usages.append(cmd_usage)
 
         return cmd_usages
 
-    @staticmethod
-    def get_arg_usage(cmd_statement, asat_cmd):
+    @classmethod
+    def get_arg_usage(cls, cmd_statement, asat_cmd):
         """Get argument usage in command statement."""
         cmd_statement = cmd_statement.strip().strip('"')
         arg_usage = ArgUsage()
@@ -102,11 +105,15 @@ class ASATUsageExtractor:
             # add options/named arguments
             for arg in re.finditer(r'--?\S+[^-]*', argline):
                 parts = re.split(r'=|\s+', arg.group().strip())
-                name = parts[0]
+                name = cls.remove_non_cmd_elements(parts[0])
                 if len(parts) == 2:
-                    value = parts[1].strip('"')
+                    value = cls.remove_non_cmd_elements(parts[1])
                     arg_usage.named[name].append(value)
                 else:
                     arg_usage.options.add(name)
 
         return arg_usage
+
+    @staticmethod
+    def remove_non_cmd_elements(param):
+        return re.sub(r'(.*?)[\])\',"]+$', r'\1', param)
