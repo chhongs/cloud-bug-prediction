@@ -24,9 +24,10 @@ public class MatrixComputation {
     private static Repository repo;
     private static Git r;
 
-    public List<MatrixData> computeMatrix(List<Integer> versions, Repository repository, Git git, List<MatrixData> matrixDataList) throws IOException, GitAPIException {
+    public List<MatrixData> computeMatrix(List<Integer> versions, Repository repository, Git git, List<MatrixData> matrixDataList, String repoPath) throws IOException, GitAPIException {
         repo = repository;
         r = git;
+        //Tags are all release names
         List<Ref> tags = r.tagList().call();
         HashMap<String, Ref> refs = new HashMap<>();
         //using a range. So we need to add 1
@@ -35,6 +36,7 @@ public class MatrixComputation {
         if (lastVersion == firstVersion || lastVersion == tags.size() + 1) {
             return null;
         }
+        // Get next release version from version list
         refs.put("current", tags.get(lastVersion - 1));
         System.out.println("current " + tags.get(lastVersion - 1));
         refs.put("previous", tags.get(firstVersion - 1));
@@ -55,6 +57,7 @@ public class MatrixComputation {
         {
             String[] classNames = matrixData.getClassName().split("\\.");
             String className = classNames[classNames.length - 1];
+            String packageName = matrixData.getClassName();
             try (TreeWalk tw = new TreeWalk(r.getRepository()))
             {
                 if(commitToCheck.getTree()==null)
@@ -74,14 +77,32 @@ public class MatrixComputation {
                             System.out.println("file: " + tw.getPathString() + " objectID " + tw.getObjectId(0));
                             System.out.println("class name: " + className);
                             ObjectId objectId = tw.getObjectId(0);
-                            List<Integer> metrics_list = calculateMetrics(tw.getPathString(), className);
-                            matrixData.setLoc(metrics_list.get(0).toString());
-                            matrixData.setWmc(metrics_list.get(1).toString());
-                            matrixData.setDit(metrics_list.get(2).toString());
-                            matrixData.setCbo(metrics_list.get(3).toString());
-                            matrixData.setRfc(metrics_list.get(4).toString());
-                            matrixData.setLcom(metrics_list.get(5).toString());
-                            break;
+                            try {
+                                // Add path of Local git repository to file path
+                                String pathToFile = repoPath.substring(0,repoPath.lastIndexOf("/")+1)+tw.getPathString();
+                                System.out.println("Path to file is: "+pathToFile);
+                                System.out.println("Package name: "+packageName); // For ex org.apache.hadoop.Test(For Test.java file)
+                                List<Integer> metrics_list = calculateMetrics(pathToFile, packageName);
+                                matrixData.setLoc(metrics_list.get(0).toString());
+                                matrixData.setWmc(metrics_list.get(1).toString());
+                                matrixData.setDit(metrics_list.get(2).toString());
+                                matrixData.setCbo(metrics_list.get(3).toString());
+                                matrixData.setRfc(metrics_list.get(4).toString());
+                                matrixData.setLcom(metrics_list.get(5).toString());
+                                break;
+                            }
+                            catch(Exception ex){
+                                // Skip files that are not found.
+                                System.out.println(" Exception for file occurred.");
+                                matrixData = null;
+//                                matrixData.setLoc("Null");
+//                                matrixData.setWmc("Null");
+//                                matrixData.setDit("Null");
+//                                matrixData.setCbo("Null");
+//                                matrixData.setRfc("Null");
+//                                matrixData.setLcom("Null");
+                                break;
+                            }
                         }
                     }
                 }
@@ -89,7 +110,7 @@ public class MatrixComputation {
         }
         return matrixDataList;
     }
-
+    /* We are already calculating LOC in calculateMetrics() method*/
     private int getLOC(ObjectId objectId) throws IOException
     {
         ObjectLoader loader = repo.open(objectId);
@@ -102,9 +123,12 @@ public class MatrixComputation {
 
     private static List<Integer> calculateMetrics(String filepath, String class_name)
     {
+        Boolean useJars = true;
         List<Integer> metrics_list = new ArrayList<>();
-        new CK().calculate(filepath, result -> {
+        new CK().calculate(filepath, useJars, result -> {
+            //If class name of Java file matches with classes fetched by CK(), then calculate metrics for the class/Java file
             if (result.getClassName().equals(class_name)) {
+                System.out.println(" Inside metrics function");
                 metrics_list.add(result.getLoc());
                 metrics_list.add(result.getWmc());
                 metrics_list.add(result.getDit());
@@ -125,6 +149,7 @@ public class MatrixComputation {
 
     private static ObjectId getActualRefObjectId(Ref ref)
     {
+        // Get commit Id
         final Ref repoPeeled = repo.peel(ref);
         if (repoPeeled.getPeeledObjectId() != null) {
             return repoPeeled.getPeeledObjectId();
@@ -136,7 +161,9 @@ public class MatrixComputation {
     {
         // get a logcommand object to call commits
         LogCommand log = r.log();
+        // Add Release/Tag Id to get logs/commits for this release
         log.addRange(getActualRefObjectId(refs.get("previous")), getActualRefObjectId(refs.get("current")));
+//        log.add(getActualRefObjectId(refs.get("previous")));
         // RevCommit object will contain all the commits for the release
         return log.call();
     }
