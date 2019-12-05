@@ -2,13 +2,13 @@ from tqdm import tqdm
 
 from asat_usage_extractor import ASATUsageExtractor
 from downloader import RepoDownloader
-from db import DB
+from model.db import DB
 from statistics import \
     plot_asat_usage_percentages, \
     print_average_number_of_asats, \
     print_asat_arg_usage
 
-DB_PATH = 'projects.sqlite3'
+DB_PATH = 'data/projects.sqlite3'
 REPOS_PATH = 'repos'
 
 db = DB(DB_PATH)

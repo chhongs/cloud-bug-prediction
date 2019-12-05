@@ -12,3 +12,4 @@ target
 ASAT/repos
 *.zip
 __pycache__
+venv
