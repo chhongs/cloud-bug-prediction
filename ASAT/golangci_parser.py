@@ -16,7 +16,7 @@ class GolangCIParser:
     @staticmethod
     def _get_yaml(path: str):
         with open(path) as f:
-            return yaml.load(f)
+            return yaml.full_load(f)
 
     @staticmethod
     def _get_toml(path: str):
