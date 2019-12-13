@@ -7,7 +7,7 @@ import re
 from model.asat_usage import ASATUsage
 from model.arg_usage import ArgUsage
 from model.asat import ASAT
-from golangci_parser import GolangCIParser
+from parsers.golangci_parser import GolangCIParser
 
 
 class ASATUsageExtractor:

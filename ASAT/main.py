@@ -1,9 +1,9 @@
 from tqdm import tqdm
 
-from asat_usage_extractor import ASATUsageExtractor
-from downloader import RepoDownloader
+from parsers.asat_usage_extractor import ASATUsageExtractor
+from util.downloader import RepoDownloader
 from model.db import DB
-from statistics import \
+from util.statistics import \
     plot_asat_usage_percentages, \
     print_average_number_of_asats, \
     print_asat_arg_usage
