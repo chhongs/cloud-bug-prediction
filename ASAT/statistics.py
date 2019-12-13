@@ -27,7 +27,7 @@ def plot_asat_usage_percentages(asats, projects):
     group_data = [(num / n_projects)*100 for num in numbers.values()]
     group_names = list(numbers.keys())
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(15, 15))
     ax.barh(group_names, group_data)
     ax.set(xlabel='Percentage',
            ylabel='ASAT',
