@@ -8,7 +8,7 @@ def get_asat_usage_numbers(projects: List[Project]):
     numbers = {}
     for project in projects:
         for asat_usage in project.asat_usages:
-            asat = asat_usage.asat
+            asat = asat_usage.asat.name
             if asat not in numbers:
                 numbers[asat] = 0
             numbers[asat] += 1
@@ -48,7 +48,7 @@ def print_asat_arg_usage(projects: List[Project]):
     asat_numbers = {}
     for project in projects:
         for asat_usage in project.asat_usages:
-            asat = asat_usage.asat
+            asat = asat_usage.asat.name
             if asat not in asat_numbers:
                 asat_numbers[asat] = 0
             asat_numbers[asat] += 1

@@ -58,7 +58,7 @@ class ASATUsageExtractor:
             # ignore comments
             if cls.is_cmd_statement(filepath, cmd_statement, asat.command):
                 if not asat_usage:
-                    asat_usage = ASATUsage(asat=asat.name)
+                    asat_usage = ASATUsage(asat=asat)
                 asat_usage.files.add(Path(filepath).name)
                 arg_usage = cls.get_arg_usage(cmd_statement, asat.command)
                 asat_usage.arg_usage.update(arg_usage)
