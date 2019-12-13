@@ -1,11 +1,16 @@
 import yaml
+import toml
 from model.golangci import GolangCI
 
 
 class GolangCIParser:
 
     def __init__(self, path: str):
-        self.yaml = self._get_yaml(path)
+        if path.endswith('yml'):
+            self.config = self._get_yaml(path)
+        elif path.endswith('toml'):
+            self.config = self._get_toml(path)
+
         self.golangci = None
 
     @staticmethod
@@ -13,10 +18,14 @@ class GolangCIParser:
         with open(path) as f:
             return yaml.load(f)
 
+    @staticmethod
+    def _get_toml(path: str):
+        return toml.load(path)
+
     def set_linters(self):
         disable_all = self._disable_all()
-        enabled = self.yaml['linters'].get('enable', [])
-        disabled = self.yaml['linters'].get('disable', [])
+        enabled = self.config['linters'].get('enable', [])
+        disabled = self.config['linters'].get('disable', [])
 
         if disable_all:
             for linter in self.golangci.enabled:
@@ -34,8 +43,8 @@ class GolangCIParser:
                 self.golangci.disabled.add(linter)
 
     def _disable_all(self):
-        if 'disable_all' in self.yaml['linters']:
-            disable_all_str = self.yaml['linters']['disable_all']
+        if 'disable_all' in self.config['linters']:
+            disable_all_str = self.config['linters']['disable_all']
             if disable_all_str == 'true':
                 disable_all = True
             else:
