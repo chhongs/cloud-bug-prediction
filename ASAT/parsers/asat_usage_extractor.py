@@ -67,8 +67,9 @@ class ASATUsageExtractor:
 
     @classmethod
     def is_cmd_statement(cls, filepath, cmd_statement, asat):
+        not_golangci_file = 'golangci' not in filepath
         not_string = cls.not_string(asat, cmd_statement)
-        not_install = 'go get' not in cmd_statement
+        not_install = cls.not_install(cmd_statement)
         not_print = 'echo' not in cmd_statement
         not_comment = not cls.is_comment(cmd_statement)
         source_code = cls.is_source_code(filepath)
@@ -76,7 +77,14 @@ class ASATUsageExtractor:
             and source_code \
             and not_print \
             and not_install \
-            and not_string
+            and not_string \
+            and not_golangci_file
+
+    @staticmethod
+    def not_install(cmd_statement):
+        """Ignore ASAT command installation commands."""
+        return 'go get' not in cmd_statement \
+            and 'honnef.co' not in cmd_statement
 
     @staticmethod
     def not_string(asat_cmd, cmd_statement):
@@ -122,7 +130,7 @@ class ASATUsageExtractor:
                 if ':' in cmd_usage:
                     # do addtional filtering here
                     # since extended grep command is slow
-                    re_str = rf'\b{asat.command}([^0-9A-Za-z_:]|$)'
+                    re_str = rf'\b{asat.command}([^0-9A-Za-z_:\-]|$)'
                     if re.search(re_str, cmd_usage):
                         cmd_usages.append(cmd_usage)
 
