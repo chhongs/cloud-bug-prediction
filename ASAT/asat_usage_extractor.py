@@ -27,28 +27,46 @@ class ASATUsageExtractor:
     def get_asat_usage(cls, repo_path, asat):
         """Create an ASATUsage instance if ASAT is used in the repository."""
         asat_cmd_usages = cls.get_cmd_usages(repo_path, asat)
-        if asat_cmd_usages:
-            asat_usage = ASATUsage(asat=asat.name)
 
-            for cmd_usage in asat_cmd_usages:
-                filepath, cmd_statement = cmd_usage.split(':', maxsplit=1)
-                # ignore comments
-                if cls.is_cmd_statement(filepath, cmd_statement):
-                    asat_usage.files.add(Path(filepath).name)
-                    arg_usage = cls.get_arg_usage(cmd_statement, asat.command)
-                    asat_usage.arg_usage.update(arg_usage)
+        asat_usage = None
 
-            return asat_usage
+        for cmd_usage in asat_cmd_usages:
+            filepath, cmd_statement = cmd_usage.split(':', maxsplit=1)
+            # ignore comments
+            if cls.is_cmd_statement(filepath, cmd_statement, asat.command):
+                if not asat_usage:
+                    asat_usage = ASATUsage(asat=asat.name)
+                asat_usage.files.add(Path(filepath).name)
+                arg_usage = cls.get_arg_usage(cmd_statement, asat.command)
+                asat_usage.arg_usage.update(arg_usage)
 
-        return None
+        return asat_usage
 
     @classmethod
-    def is_cmd_statement(cls, filepath, cmd_statement):
+    def is_cmd_statement(cls, filepath, cmd_statement, asat):
+        not_string = cls.not_string(asat, cmd_statement)
         not_install = 'go get' not in cmd_statement
         not_print = 'echo' not in cmd_statement
         not_comment = not cls.is_comment(cmd_statement)
         source_code = cls.is_source_code(filepath)
-        return not_comment and source_code and not_print and not_install
+        return not_comment \
+            and source_code \
+            and not_print \
+            and not_install \
+            and not_string
+
+    @staticmethod
+    def not_string(asat_cmd, cmd_statement):
+        """Check if ASAT command is used within a string.
+
+        Some ASAT commands represent common english words and therefore cause
+        lots of false positives (e.g. "whitespace" or "unused").
+        """
+        blacklist = {'whitespace', 'unused', 'misspell'}
+        if asat_cmd in blacklist:
+            if re.search(rf'"[^"]*{asat_cmd}[^"]*"', cmd_statement):
+                return False
+        return True
 
     @staticmethod
     def is_comment(cmd_statement):
@@ -81,7 +99,8 @@ class ASATUsageExtractor:
                 if ':' in cmd_usage:
                     # do addtional filtering here
                     # since extended grep command is slow
-                    if re.search(rf'\b{asat.command}\b', cmd_usage):
+                    re_str = rf'\b{asat.command}([^0-9A-Za-z_:]|$)'
+                    if re.search(re_str, cmd_usage):
                         cmd_usages.append(cmd_usage)
 
         return cmd_usages
