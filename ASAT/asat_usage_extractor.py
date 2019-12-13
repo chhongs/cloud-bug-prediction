@@ -1,15 +1,19 @@
+from typing import List
 from pathlib import Path
+import glob
 import subprocess
 import re
 
 from model.asat_usage import ASATUsage
 from model.arg_usage import ArgUsage
+from model.asat import ASAT
+from golangci_parser import GolangCIParser
 
 
 class ASATUsageExtractor:
     """Extract ASAT usages from a repository."""
 
-    def __init__(self, asats):
+    def __init__(self, asats: List[ASAT]):
         self.asats = asats
 
     def extract(self, repo_path):
@@ -20,6 +24,25 @@ class ASATUsageExtractor:
             asat_usage = self.get_asat_usage(repo_path, asat)
             if asat_usage:
                 asat_usages.append(asat_usage)
+
+        asat_usages.extend(self.get_golangci_asat_usages(repo_path))
+
+        return asat_usages
+
+    def get_golangci_asat_usages(self, repo_path: str) -> List[ASATUsage]:
+        """Get the ASAT usages from the golangci configuration file."""
+        asat_usages = []
+        asats = {asat.name: asat for asat in self.asats}
+        pattern = Path(repo_path) / '.golangci.*'
+        for path in glob.glob(str(pattern), recursive=True):
+            parser = GolangCIParser(path)
+            golangci = parser.parse()
+            for asat_name in golangci.enabled:
+                if asat_name in asats:
+                    asat = asats[asat_name]
+                    asat_usage = ASATUsage(asat)
+                    asat_usage.files.add(Path(path).name)
+                    asat_usages.append(asat_usage)
 
         return asat_usages
 
