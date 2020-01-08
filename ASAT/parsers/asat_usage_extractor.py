@@ -18,16 +18,18 @@ class ASATUsageExtractor:
 
     def extract(self, repo_path):
         """Extract the ASATs used in the given repository."""
-        asat_usages = []
+        asat_usages = {}
 
         for asat in self.asats:
             asat_usage = self.get_asat_usage(repo_path, asat)
             if asat_usage:
-                asat_usages.append(asat_usage)
+                asat_usages[asat.name] = asat_usage
 
-        asat_usages.extend(self.get_golangci_asat_usages(repo_path))
+        for asat_usage in self.get_golangci_asat_usages(repo_path):
+            if asat_usage.asat.name not in asat_usages:
+                asat_usages[asat_usage.asat.name] = asat_usage
 
-        return asat_usages
+        return list(asat_usages.values())
 
     def get_golangci_asat_usages(self, repo_path: str) -> List[ASATUsage]:
         """Get the ASAT usages from the golangci configuration file."""
