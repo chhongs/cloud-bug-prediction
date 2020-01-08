@@ -9,7 +9,7 @@ target
 *.blg
 *.gz
 *.csv
-ASAT/repos
+rq2/repos
 *.zip
 __pycache__
 venv
