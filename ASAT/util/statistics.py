@@ -25,7 +25,7 @@ def plot_asat_usage_percentages(asats, projects):
             numbers[asat.name] = 0
 
     group_data = [(num / n_projects)*100 for num in numbers.values()]
-    group_names = list(numbers.keys())
+    group_names = sorted(list(numbers.keys()))
 
     fig, ax = plt.subplots(figsize=(15, 15))
     ax.barh(group_names, group_data)
@@ -63,7 +63,7 @@ def print_asat_arg_usage(projects: List[Project]):
 
                 param_numbers[asat][param] += 1
 
-    for asat in param_numbers:
+    for asat in sorted(param_numbers):
         print('ASAT: ', asat)
         asat_num = asat_numbers[asat]
         for param in param_numbers[asat]:
@@ -72,6 +72,8 @@ def print_asat_arg_usage(projects: List[Project]):
 
 
 def compute_statistics(projects, asats):
+    print('Number of projects: ', len(projects))
     plot_asat_usage_percentages(asats, projects)
     print_average_number_of_asats(projects)
     print_asat_arg_usage(projects)
+    print()
