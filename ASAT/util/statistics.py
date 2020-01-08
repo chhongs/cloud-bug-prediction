@@ -69,3 +69,9 @@ def print_asat_arg_usage(projects: List[Project]):
         for param in param_numbers[asat]:
             param_num = int(param_numbers[asat][param])
             print(f'\tParameter: {param}, {param_num}/{asat_num}')
+
+
+def compute_statistics(projects, asats):
+    plot_asat_usage_percentages(asats, projects)
+    print_average_number_of_asats(projects)
+    print_asat_arg_usage(projects)
