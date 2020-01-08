@@ -11,3 +11,4 @@ class Project:
     stars: int
     commits: int
     asat_usages: List[ASATUsage]
+    is_cloud_app: bool

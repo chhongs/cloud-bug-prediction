@@ -15,7 +15,14 @@ class DB:
         projects = []
         res = self.cursor.execute("SELECT * FROM Projects")
         for row in res.fetchall():
-            project = Project(*row, [])
+            url, desc, stars, commits, is_cloud_app = row
+            project = Project(url=url,
+                              description=desc,
+                              stars=stars,
+                              commits=commits,
+                              asat_usages=[],
+                              is_cloud_app=bool(is_cloud_app)
+            )
             projects.append(project)
 
         return projects
