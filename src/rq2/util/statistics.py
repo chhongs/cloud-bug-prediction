@@ -24,8 +24,10 @@ def plot_asat_usage_percentages(asats, projects):
         if asat.name not in numbers:
             numbers[asat.name] = 0
 
-    group_data = [(num / n_projects)*100 for num in numbers.values()]
-    group_names = sorted(list(numbers.keys()))
+    sorted_numbers = {k: numbers[k] for k in sorted(numbers)}
+
+    group_data = [(num / n_projects)*100 for num in sorted_numbers.values()]
+    group_names = list(sorted_numbers.keys())
 
     fig, ax = plt.subplots(figsize=(15, 15))
     ax.barh(group_names, group_data)
