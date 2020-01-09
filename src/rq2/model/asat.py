@@ -10,3 +10,4 @@ class ASAT:
     configs: List[str]
     command: str
     aggregator: bool
+    category: str

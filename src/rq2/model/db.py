@@ -31,13 +31,14 @@ class DB:
         asats = []
         res = self.cursor.execute("SELECT * FROM ASATs")
         for row in res.fetchall():
-            name, desc, docs, cfgs, cmd, aggregator = row
+            name, desc, docs, cfgs, cmd, aggregator, category = row
             asat = ASAT(name=name,
                         description=desc,
                         docs=docs,
                         configs=cfgs.split(', ') if cfgs else [],
                         command=cmd,
-                        aggregator=bool(aggregator))
+                        aggregator=bool(aggregator),
+                        category=category)
             asats.append(asat)
 
         return asats
