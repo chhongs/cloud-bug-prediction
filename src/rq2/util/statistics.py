@@ -38,7 +38,7 @@ def plot_asat_usage_percentages(asats, projects):
     ax.xaxis.set_ticks(np.arange(0, 110, 10))
 
     for i, v in enumerate(group_data):
-        ax.text(v + 1, i - .15, str(v), color='blue')
+        ax.text(v + 1, i - .15, str(round(v, 0)), color='blue')
 
     plt.show()
 
