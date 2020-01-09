@@ -1,6 +1,7 @@
 from typing import List
 import matplotlib.pyplot as plt
 from model.project import Project
+import numpy as np
 
 
 def get_asat_usage_numbers(projects: List[Project]):
@@ -34,6 +35,7 @@ def plot_asat_usage_percentages(asats, projects):
     ax.set(xlabel='Percentage',
            ylabel='ASAT',
            title='Percentages for ASATs used in projects')
+    ax.xaxis.set_ticks(np.arange(0, 100, 10))
     plt.show()
 
 
