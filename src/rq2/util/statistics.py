@@ -69,12 +69,22 @@ def plot(n_projects, numbers, figsize=(15, 15)):
     plt.show()
 
 
-def print_average_number_of_asats(projects):
+def print_average_number_of_asats(projects: List[Project]):
     total = 0
+    by_category = {}
     for project in projects:
         total += len(project.asat_usages)
+        for asat_usage in project.asat_usages:
+            category = asat_usage.asat.category
+            if category not in by_category:
+                by_category[category] = 0
+            by_category[category] += 1
 
     print('Average number of ASATs used by projects', total/len(projects))
+    print('By category:')
+    for category in by_category:
+        category_total = by_category[category]
+        print(f'{category}: ', round(category_total/len(projects), 1))
 
 
 def print_asat_arg_usage(projects: List[Project]):
