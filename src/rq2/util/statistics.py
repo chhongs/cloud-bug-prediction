@@ -115,10 +115,26 @@ def print_asat_arg_usage(projects: List[Project]):
             print(f'\tParameter: {param}, {param_num}/{asat_num}')
 
 
+def print_percentage_standard_configuration(projects: List[Project]):
+    total_asat_usages = 0
+    non_configuration = 0
+
+    for project in projects:
+        for asat_usage in project.asat_usages:
+            total_asat_usages += 1
+
+            if not asat_usage.is_configured():
+                non_configuration += 1
+
+    print('Percentage of projects using standard configuration: ',
+          round((non_configuration/total_asat_usages)*100, 1))
+
+
 def compute_statistics(projects, asats):
     print('Number of projects: ', len(projects))
     plot_asat_usage_percentages(asats, projects)
     plot_asat_category_usage_percentages(asats, projects)
     print_average_number_of_asats(projects)
     print_asat_arg_usage(projects)
+    print_percentage_standard_configuration(projects)
     print()
