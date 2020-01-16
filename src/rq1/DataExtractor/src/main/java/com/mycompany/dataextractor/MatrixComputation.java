@@ -38,9 +38,9 @@ public class MatrixComputation {
         }
         // Get next release version from version list
         refs.put("current", tags.get(lastVersion - 1));
-        System.out.println("current " + tags.get(lastVersion - 1));
+        //System.out.println("current " + tags.get(lastVersion - 1));
         refs.put("previous", tags.get(firstVersion - 1));
-        System.out.println("previous " + tags.get(firstVersion - 1));
+        //System.out.println("previous " + tags.get(firstVersion - 1));
         Iterable<RevCommit> logs = getRevCommits(refs);
 
         RevCommit commitToCheck = null;
@@ -52,7 +52,7 @@ public class MatrixComputation {
             //System.out.println("Commit message.: " + commitToCheck.getFullMessage() + " commit date " + dateAsText);
             //System.out.println("Tag for this commit: " + commitToCheck + " " + commitToCheck.getName());
         }
-        System.out.println("total commits " + count);
+
         for (MatrixData matrixData : matrixDataList)
         {
             String[] classNames = matrixData.getClassName().split("\\.");
@@ -60,7 +60,7 @@ public class MatrixComputation {
             String packageName = matrixData.getClassName();
             try (TreeWalk tw = new TreeWalk(r.getRepository()))
             {
-                if(commitToCheck.getTree()==null)
+                if(commitToCheck== null || commitToCheck.getTree()==null)
                     return null;
                 tw.addTree(commitToCheck.getTree());
                 tw.setRecursive(false);
@@ -74,15 +74,21 @@ public class MatrixComputation {
                         {
                         if (tw.getPathString().contains(className))
                         {
-                            System.out.println("file: " + tw.getPathString() + " objectID " + tw.getObjectId(0));
-                            System.out.println("class name: " + className);
+                            //System.out.println("file: " + tw.getPathString() + " objectID " + tw.getObjectId(0));
+                            //System.out.println("class name: " + className);
                             ObjectId objectId = tw.getObjectId(0);
                             try {
+                                //System.out.println("repo path"+repoPath);
                                 // Add path of Local git repository to file path
-                                String pathToFile = repoPath.substring(0,repoPath.lastIndexOf("/")+1)+tw.getPathString();
-                                System.out.println("Path to file is: "+pathToFile);
-                                System.out.println("Package name: "+packageName); // For ex org.apache.hadoop.Test(For Test.java file)
+                                String pathToFile = repoPath.substring(0,repoPath.lastIndexOf("\\")+1)+tw.getPathString();
+
+                                //System.out.println("Package name: "+packageName); // For ex org.apache.hadoop.Test(For Test.java file)
                                 List<Integer> metrics_list = calculateMetrics(pathToFile, packageName);
+                                System.out.println(metrics_list.get(0).toString());
+                                System.out.println(metrics_list.get(1).toString());
+                                System.out.println(metrics_list.get(2).toString());
+                                System.out.println(metrics_list.get(3).toString());
+                                System.out.println(metrics_list.get(4).toString());
                                 matrixData.setLoc(metrics_list.get(0).toString());
                                 matrixData.setWmc(metrics_list.get(1).toString());
                                 matrixData.setDit(metrics_list.get(2).toString());
@@ -93,7 +99,7 @@ public class MatrixComputation {
                             }
                             catch(Exception ex){
                                 // Skip files that are not found.
-                                System.out.println(" Exception for file occurred.");
+                                //System.out.println(" Exception for file occurred.");
                                 matrixData = null;
 //                                matrixData.setLoc("Null");
 //                                matrixData.setWmc("Null");
@@ -108,6 +114,7 @@ public class MatrixComputation {
                 }
             }
         }
+
         return matrixDataList;
     }
     /* We are already calculating LOC in calculateMetrics() method*/
@@ -117,18 +124,21 @@ public class MatrixComputation {
         ObjectStream loaderstream = loader.openStream();
         // Calculate LOC of file
         int loc = LOCCalculator.calculate(loaderstream);
-        System.out.println("loc " + loc);
+        //System.out.println("loc " + loc);
         return loc;
     }
 
     private static List<Integer> calculateMetrics(String filepath, String class_name)
     {
+
         Boolean useJars = true;
         List<Integer> metrics_list = new ArrayList<>();
+        System.out.println("check CK");
         new CK().calculate(filepath, useJars, result -> {
+            System.out.println("check CK"+result.getClassName()+class_name);
             //If class name of Java file matches with classes fetched by CK(), then calculate metrics for the class/Java file
             if (result.getClassName().equals(class_name)) {
-                System.out.println(" Inside metrics function");
+                System.out.println("equaln");
                 metrics_list.add(result.getLoc());
                 metrics_list.add(result.getWmc());
                 metrics_list.add(result.getDit());
@@ -141,6 +151,9 @@ public class MatrixComputation {
                 System.out.println("CBO value: " + result.getCbo());
                 System.out.println("WMC value: " + result.getWmc());
                 System.out.println("LCOM value: " + result.getLcom());*/
+            }
+            else {
+                System.out.println("not equal");
             }
         });
         // LOC, WMC, DIT, CBO, RFC and LCOM metrics
